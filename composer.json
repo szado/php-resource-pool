@@ -1,0 +1,25 @@
+{
+    "name": "szado/reactphp-connection-pool",
+    "description": "Simple and universal connection pool for ReactPHP applications.",
+    "type": "library",
+    "require": {
+        "react/promise": "^2.8",
+        "react/async": "dev-main",
+        "react/event-loop": "^1.2"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.5"
+    },
+    "license": "MIT",
+    "autoload": {
+        "psr-4": {
+            "Szado\\React\\ConnectionPool\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "Jarosław Żak",
+            "email": "jaroslaw.zak@vihura.com"
+        }
+    ]
+}
