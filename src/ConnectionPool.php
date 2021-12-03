@@ -26,8 +26,8 @@ class ConnectionPool implements ConnectionPoolInterface
      * @param class-string<ConnectionAdapterInterface> $connectionAdapterClass Class to use as adapter for single connection created by factory.
      * @param class-string<ConnectionSelectorInterface> $connectionSelectorClass Connection selector to use on `getConnection()` call.
      * @param int|null $connectionsLimit Maximum number of connections that can be created (null for unlimited).
-     * @param float $retryLimit How many times try to search for an active connection before rejecting (0 for immediately rejection if none at the moment).
-     * @param float|null $retryEverySec Check for available connections every how many seconds (null for immediately rejection if none at the moment).
+     * @param float|null $retryLimit How many times try to search for an active connection before rejecting (null for unlimited, 0 for immediately rejection if none at the moment).
+     * @param float $retryEverySec Check for available connections every how many seconds (only if $retryLimit is enabled).
      * @param LoopInterface|null $loop
      */
     public function __construct(
@@ -35,14 +35,15 @@ class ConnectionPool implements ConnectionPoolInterface
         protected string         $connectionAdapterClass,
         string                   $connectionSelectorClass = UsageConnectionSelector::class,
         protected ?int           $connectionsLimit = null,
-        protected float          $retryLimit = 0,
-        protected ?float         $retryEverySec = null,
+        protected ?int           $retryLimit = null,
+        protected float          $retryEverySec = 0.001, // 1ms
         protected ?LoopInterface $loop = null
     )
     {
         if (!is_subclass_of($this->connectionAdapterClass, ConnectionAdapterInterface::class)) {
             throw new \TypeError('Class given in `connectionAdapterClass` must implements ConnectionAdapterInterface');
         }
+
         $this->connections = new \SplObjectStorage();
         $this->awaiting = new \SplObjectStorage();
         $this->selector = new $connectionSelectorClass($this->connections);
@@ -94,7 +95,7 @@ class ConnectionPool implements ConnectionPoolInterface
 
     protected function retry(Deferred $deferred): void
     {
-        if ($this->retryLimit === null || $this->retryLimit < 1 || $this->retryEverySec === null) {
+        if ($this->retryLimit !== null && $this->retryLimit < 1) {
             $deferred->reject(new ConnectionPoolException('No available connection to use'));
             return;
         }
@@ -104,6 +105,7 @@ class ConnectionPool implements ConnectionPoolInterface
         }
 
         if ($this->awaiting[$deferred] === $this->retryLimit) {
+            $this->awaiting->detach($deferred);
             $deferred->reject(new ConnectionPoolException("No available connection to use; $this->retryLimit attempts were made"));
             return;
         }
