@@ -16,6 +16,11 @@
             "Szado\\React\\ConnectionPool\\": "src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "Szado\\Tests\\React\\ConnectionPool\\": "tests/"
+        }
+    },
     "authors": [
         {
             "name": "Jarosław Żak",
