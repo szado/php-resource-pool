@@ -38,7 +38,7 @@ You can pass additional parameters to pool constructor:
 - `retryEverySec` - check for available connections every how many seconds (only if $retryLimit is enabled).
 - `loop` - instance of `React\EventLoop\LoopInterface` to use.
 
-## To do
+## Todo
 - Built-in adapters (`clue/reactphp-redis`, `friends-of-reactphp/mysql`).
 - Connection selector based on Round Robin algorithm.
 
