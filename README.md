@@ -14,17 +14,14 @@ Connection pooling allows you to easily manage range of connections with some re
 ## Examples
 
 ```php
-function connectToDatabase(): PromiseInterface {
-  // Return promise that resolves to connection object.
-}
-
 class MyConnectionAdapter implements Szado\React\ConnectionPool\ConnectionAdapters\ConnectionAdapterInterface
 {
-  // Implementation of adapter for your connection object created by `connectToDatabase()`.
+  // Implementation of adapter for your connection.
 }
 
-$pool = new Szado\React\ConnectionPool\ConnectionPool(connectToDatabase(...), MyConnectionAdapter::class);
-$connection = React\Async\await($pool->getConnection());
+$pool = new Szado\React\ConnectionPool\ConnectionPool(fn () => new MyConnectionAdapter());
+$adapter = React\Async\await($pool->get());
+$connection = $adapter->getConnection();
 // `$connection` is ready to use :)
 ```
 

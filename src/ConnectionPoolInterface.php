@@ -8,5 +8,5 @@ use React\Promise\PromiseInterface;
 
 interface ConnectionPoolInterface
 {
-    public function getConnection(): PromiseInterface;
+    public function get(): PromiseInterface;
 }

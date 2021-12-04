@@ -4,7 +4,6 @@ namespace Szado\Tests\React\ConnectionPool;
 
 use React\EventLoop\Loop;
 use React\Promise\PromiseInterface;
-use Szado\React\ConnectionPool\ConnectionAdapters\ConnectionAdapterInterface;
 use Szado\React\ConnectionPool\ConnectionPool;
 use PHPUnit\Framework\TestCase;
 use function React\Promise\resolve;
@@ -15,7 +14,6 @@ class ConnectionPoolTest extends TestCase
     {
         return [
             'connectionFactory' => fn () => resolve(),
-            'connectionAdapterClass' => Adapter::class,
             'connectionSelectorClass' => Selector::class,
             'connectionsLimit' => null,
             'retryLimit' => null,
@@ -24,19 +22,10 @@ class ConnectionPoolTest extends TestCase
         ];
     }
 
-    public function test__construct()
-    {
-        $this->expectException(\TypeError::class);
-        new ConnectionPool(...[
-            ...$this->getCorrectConstructorArgs(),
-            'connectionAdapterClass' => \stdClass::class
-        ]);
-    }
-
     public function testGetConnection()
     {
         $cp = new ConnectionPool(...$this->getCorrectConstructorArgs());
-        $this->assertInstanceOf(PromiseInterface::class, $cp->getConnection());
+        $this->assertInstanceOf(PromiseInterface::class, $cp->get());
     }
 
     public function test_canMakeNewConnection()

@@ -23,7 +23,6 @@ class ConnectionPool implements ConnectionPoolInterface
 
     /**
      * @param \Closure $connectionFactory Closure which creates connection object and returns promise.
-     * @param class-string<ConnectionAdapterInterface> $connectionAdapterClass Class to use as adapter for single connection created by factory.
      * @param class-string<ConnectionSelectorInterface> $connectionSelectorClass Connection selector to use on `getConnection()` call.
      * @param int|null $connectionsLimit Maximum number of connections that can be created (null for unlimited).
      * @param float|null $retryLimit How many times try to search for an active connection before rejecting (null for unlimited, 0 for immediately rejection if none at the moment).
@@ -32,7 +31,6 @@ class ConnectionPool implements ConnectionPoolInterface
      */
     public function __construct(
         protected \Closure       $connectionFactory,
-        protected string         $connectionAdapterClass,
         string                   $connectionSelectorClass = UsageConnectionSelector::class,
         protected ?int           $connectionsLimit = null,
         protected ?int           $retryLimit = null,
@@ -40,10 +38,6 @@ class ConnectionPool implements ConnectionPoolInterface
         protected ?LoopInterface $loop = null
     )
     {
-        if (!is_subclass_of($this->connectionAdapterClass, ConnectionAdapterInterface::class)) {
-            throw new \TypeError('Class given in `connectionAdapterClass` must implements ConnectionAdapterInterface');
-        }
-
         $this->connections = new \SplObjectStorage();
         $this->awaiting = new \SplObjectStorage();
         $this->selector = new $connectionSelectorClass($this->connections);
@@ -53,17 +47,16 @@ class ConnectionPool implements ConnectionPoolInterface
     /**
      * Get connection from pool.
      * Reject if no connection is available and cannot create the new one.
+     * @return PromiseInterface<ConnectionAdapterInterface, ConnectionPoolException>
      */
-    public function getConnection(): PromiseInterface
+    public function get(): PromiseInterface
     {
         $connection = $this->selectConnection();
 
         if (!$connection) {
             if ($this->canMakeNewConnection()) {
                 try {
-                    /** @var ConnectionAdapterInterface $connection */
-                    $connection = await($this->makeNewConnection());
-                    $this->connections->attach($connection);
+                    $this->connections->attach($this->makeNewConnection());
                 } catch (\Throwable $exception) {
                     return reject($exception);
                 }
@@ -74,7 +67,7 @@ class ConnectionPool implements ConnectionPoolInterface
             }
         }
 
-        return resolve($connection->getConnection());
+        return resolve($connection);
     }
 
     protected function selectConnection(): ?ConnectionAdapterInterface
@@ -87,10 +80,9 @@ class ConnectionPool implements ConnectionPoolInterface
         return $this->connectionsLimit === null || $this->connections->count() < $this->connectionsLimit;
     }
 
-    protected function makeNewConnection(): PromiseInterface
+    protected function makeNewConnection(): ConnectionAdapterInterface
     {
-        return ($this->connectionFactory)()
-            ->then(fn (object $connection) => new $this->connectionAdapterClass($connection));
+        return await(($this->connectionFactory)());
     }
 
     protected function retry(Deferred $deferred): void
@@ -115,7 +107,7 @@ class ConnectionPool implements ConnectionPoolInterface
 
             if ($connectionAdapter) {
                 $this->awaiting->detach($deferred);
-                $deferred->resolve($connectionAdapter->getConnection());
+                $deferred->resolve($connectionAdapter);
                 return;
             }
 
