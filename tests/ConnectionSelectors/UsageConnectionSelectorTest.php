@@ -15,9 +15,9 @@ class UsageConnectionSelectorTest extends TestCase
         $sel = new UsageConnectionSelector($st);
         $this->assertNull($sel->select());
 
-        $a1 = new Adapter('a1');
-        $a2 = new Adapter('a2');
-        $a3 = new Adapter('a3');
+        $a1 = new Adapter();
+        $a2 = new Adapter();
+        $a3 = new Adapter();
 
         $st->attach($a1);
         $this->assertEquals($a1, $sel->select());
