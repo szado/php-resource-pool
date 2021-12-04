@@ -7,14 +7,14 @@ use Szado\React\ConnectionPool\ConnectionSelectors\ConnectionSelectorInterface;
 
 class Selector implements ConnectionSelectorInterface
 {
-    public function __construct(private \SplObjectStorage $connectionAdapters)
+    public function __construct(private \SplObjectStorage $connections)
     {
     }
 
     public function select(): ConnectionAdapterInterface|null
     {
-        $this->connectionAdapters->rewind();
+        $this->connections->rewind();
 
-        return $this->connectionAdapters->count() ? $this->connectionAdapters->current() : null;
+        return $this->connections->count() ? $this->connections->current() : null;
     }
 }

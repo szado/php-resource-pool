@@ -8,6 +8,6 @@ use Szado\React\ConnectionPool\ConnectionAdapters\ConnectionAdapterInterface;
 
 interface ConnectionSelectorInterface
 {
-    public function __construct(\SplObjectStorage $connectionAdapters);
+    public function __construct(\SplObjectStorage $connections);
     public function select(): ConnectionAdapterInterface|null;
 }
