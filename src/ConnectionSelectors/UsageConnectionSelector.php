@@ -9,7 +9,7 @@ use Szado\React\ConnectionPool\ConnectionState;
 
 class UsageConnectionSelector implements ConnectionSelectorInterface
 {
-    public function __construct(private \SplObjectStorage $connections)
+    public function __construct(protected \SplObjectStorage $connections)
     {
     }
 
@@ -19,8 +19,8 @@ class UsageConnectionSelector implements ConnectionSelectorInterface
 
         /** @var ConnectionAdapterInterface $connection */
         foreach ($this->connections as $connection) {
-            if ($this->connections[$connection] === null) {
-                $this->connections[$connection] = 0;
+            if ($connection->getState() !== ConnectionState::Ready) {
+                continue;
             }
 
             if ($leastUsed === null) {
@@ -28,16 +28,15 @@ class UsageConnectionSelector implements ConnectionSelectorInterface
                 continue;
             }
 
-            if (
-                $this->connections[$connection] < $this->connections[$leastUsed]
-                && $connection->getState() === ConnectionState::Ready
-            ) {
+            $this->connections[$connection] ??= 0;
+
+            if ($this->connections[$connection] < $this->connections[$leastUsed]) {
                 $leastUsed = $connection;
             }
         }
 
         if ($leastUsed) {
-            $this->connections[$leastUsed] = $this->connections[$leastUsed] + 1;
+            $this->connections[$leastUsed] += 1;
         }
 
         return $leastUsed;

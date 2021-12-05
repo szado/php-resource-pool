@@ -7,13 +7,10 @@ namespace Szado\React\ConnectionPool;
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
 use React\Promise\Deferred;
-use React\Promise\PromiseInterface;
 use Szado\React\ConnectionPool\ConnectionAdapters\ConnectionAdapterInterface;
 use Szado\React\ConnectionPool\ConnectionSelectors\ConnectionSelectorInterface;
 use Szado\React\ConnectionPool\ConnectionSelectors\UsageConnectionSelector;
 use function React\Async\await;
-use function React\Promise\reject;
-use function React\Promise\resolve;
 
 class ConnectionPool implements ConnectionPoolInterface
 {
@@ -22,10 +19,10 @@ class ConnectionPool implements ConnectionPoolInterface
     protected ConnectionSelectorInterface $selector;
 
     /**
-     * @param \Closure $connectionFactory Closure which creates connection object and returns promise.
+     * @param \Closure $connectionFactory Closure which creates connection adapter object with new connection.
      * @param class-string<ConnectionSelectorInterface> $connectionSelectorClass Connection selector to use on `getConnection()` call.
      * @param int|null $connectionsLimit Maximum number of connections that can be created (null for unlimited).
-     * @param float|null $retryLimit How many times try to search for an active connection before rejecting (null for unlimited, 0 for immediately rejection if none at the moment).
+     * @param int|null $retryLimit How many times try to search for an active connection before rejecting (null for unlimited, 0 for immediately rejection if none at the moment).
      * @param float $retryEverySec Check for available connections every how many seconds (only if $retryLimit is enabled).
      * @param LoopInterface|null $loop
      */
@@ -46,28 +43,22 @@ class ConnectionPool implements ConnectionPoolInterface
 
     /**
      * Get connection from pool.
-     * Reject if no connection is available and cannot create the new one.
-     * @return PromiseInterface<ConnectionAdapterInterface, ConnectionPoolException>
+     * Throws error if no connection is available and cannot create the new one.
+     * @throws ConnectionPoolException
      */
-    public function get(): PromiseInterface
+    public function get(): ConnectionAdapterInterface
     {
         $connection = $this->selectConnection();
 
         if (!$connection) {
             if ($this->canMakeNewConnection()) {
-                try {
-                    $this->connections->attach($this->makeNewConnection());
-                } catch (\Throwable $exception) {
-                    return reject($exception);
-                }
-            } else {
-                $deferred = new Deferred();
-                $this->loop->futureTick(fn () => $this->retry($deferred));
-                return $deferred->promise();
+                $this->connections->attach($this->makeNewConnection());
+                return $this->get();
             }
+            return $this->retryWithDelay();
         }
 
-        return resolve($connection);
+        return $connection;
     }
 
     protected function selectConnection(): ?ConnectionAdapterInterface
@@ -82,15 +73,16 @@ class ConnectionPool implements ConnectionPoolInterface
 
     protected function makeNewConnection(): ConnectionAdapterInterface
     {
-        return await(($this->connectionFactory)());
+        return ($this->connectionFactory)();
     }
 
-    protected function retry(Deferred $deferred): void
+    protected function retryWithDelay(Deferred $deferred = null): ConnectionAdapterInterface
     {
         if ($this->retryLimit !== null && $this->retryLimit < 1) {
-            $deferred->reject(new ConnectionPoolException('No available connection to use'));
-            return;
+            throw new ConnectionPoolException('No available connection to use');
         }
+
+        $deferred ??= new Deferred();
 
         if (!$this->awaiting->contains($deferred)) {
             $this->awaiting->attach($deferred, 0);
@@ -98,8 +90,7 @@ class ConnectionPool implements ConnectionPoolInterface
 
         if ($this->awaiting[$deferred] === $this->retryLimit) {
             $this->awaiting->detach($deferred);
-            $deferred->reject(new ConnectionPoolException("No available connection to use; $this->retryLimit attempts were made"));
-            return;
+            throw new ConnectionPoolException("No available connection to use; $this->retryLimit attempts were made");
         }
 
         $this->loop->addTimer($this->retryEverySec, function () use ($deferred) {
@@ -112,7 +103,9 @@ class ConnectionPool implements ConnectionPoolInterface
             }
 
             $this->awaiting[$deferred] = $this->awaiting[$deferred] + 1;
-            $this->retry($deferred);
+            $this->retryWithDelay($deferred);
         });
+
+        return await($deferred->promise());
     }
 }

@@ -8,9 +8,9 @@ class Adapter implements \Szado\React\ConnectionPool\ConnectionAdapters\Connecti
 {
     public ConnectionState $state;
 
-    public function __construct()
+    public function __construct(ConnectionState $connectionState = ConnectionState::Ready)
     {
-        $this->state = ConnectionState::Ready;
+        $this->state = $connectionState;
     }
 
     public function getState(): \Szado\React\ConnectionPool\ConnectionState
