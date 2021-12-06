@@ -6,11 +6,14 @@ namespace Szado\React\ConnectionPool;
 
 use React\EventLoop\Loop;
 use React\EventLoop\LoopInterface;
+use React\EventLoop\TimerInterface;
 use React\Promise\Deferred;
+use React\Promise\PromiseInterface;
 use Szado\React\ConnectionPool\ConnectionAdapters\ConnectionAdapterInterface;
 use Szado\React\ConnectionPool\ConnectionSelectors\ConnectionSelectorInterface;
 use Szado\React\ConnectionPool\ConnectionSelectors\UsageConnectionSelector;
 use function React\Async\await;
+use function React\Promise\reject;
 
 class ConnectionPool implements ConnectionPoolInterface
 {
@@ -76,34 +79,34 @@ class ConnectionPool implements ConnectionPoolInterface
         return ($this->connectionFactory)();
     }
 
-    protected function retryWithDelay(Deferred $deferred = null): \React\Promise\Promise
+    protected function retryWithDelay(): PromiseInterface
     {
         if ($this->retryLimit !== null && $this->retryLimit < 1) {
-            throw new ConnectionPoolException('No available connection to use');
+            return reject(new ConnectionPoolException('No available connection to use'));
         }
 
-        $deferred ??= new Deferred();
+        $deferred = new Deferred();
 
         if (!$this->awaiting->contains($deferred)) {
             $this->awaiting->attach($deferred, 0);
         }
 
-        if ($this->awaiting[$deferred] === $this->retryLimit) {
-            $this->awaiting->detach($deferred);
-            throw new ConnectionPoolException("No available connection to use; $this->retryLimit attempts were made");
-        }
-
-        $this->loop->addTimer($this->retryEverySec, function () use ($deferred) {
+        $this->loop->addPeriodicTimer($this->retryEverySec, function (TimerInterface $timer) use ($deferred) {
             $connectionAdapter = $this->selectConnection();
 
             if ($connectionAdapter) {
                 $this->awaiting->detach($deferred);
+                $this->loop->cancelTimer($timer);
                 $deferred->resolve($connectionAdapter);
                 return;
             }
 
-            $this->awaiting[$deferred] = $this->awaiting[$deferred] + 1;
-            $this->retryWithDelay($deferred);
+            $this->awaiting[$deferred] += 1;
+            if ($this->awaiting[$deferred] === $this->retryLimit) {
+                $this->awaiting->detach($deferred);
+                $this->loop->cancelTimer($timer);
+                $deferred->reject(new ConnectionPoolException("No available connection to use; $this->retryLimit retries were made and reached the limit"));
+            }
         });
 
         return $deferred->promise();

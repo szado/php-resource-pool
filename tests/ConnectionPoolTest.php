@@ -6,7 +6,6 @@ use React\EventLoop\Loop;
 use Szado\React\ConnectionPool\ConnectionPool;
 use PHPUnit\Framework\TestCase;
 use Szado\React\ConnectionPool\ConnectionPoolException;
-use Szado\React\ConnectionPool\ConnectionState;
 
 class ConnectionPoolTest extends TestCase
 {
@@ -36,15 +35,28 @@ class ConnectionPoolTest extends TestCase
         $this->assertEquals($a1, $a2);
     }
 
-    public function testGetException()
+    public function testGetExceptionLimitReached()
     {
         $cp = new ConnectionPool(...[
             ...$this->getCorrectConstructorArgs(),
-            'connectionFactory' => fn () => new Adapter(ConnectionState::Busy),
+            'connectionSelectorClass' => AlwaysNullSelector::class,
             'connectionsLimit' => 1,
+            'retryLimit' => 1,
         ]);
-        $cp->get();
         $this->expectException(ConnectionPoolException::class);
+        $cp->get();
+    }
+
+    public function testGetExceptionNoAvailable()
+    {
+        $cp = new ConnectionPool(...[
+            ...$this->getCorrectConstructorArgs(),
+            'connectionSelectorClass' => AlwaysNullSelector::class,
+            'connectionsLimit' => 1,
+            'retryLimit' => 0,
+        ]);
+        $this->expectException(ConnectionPoolException::class);
+        $cp->get();
     }
 
     public function test_canMakeNewConnection()
