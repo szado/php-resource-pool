@@ -55,7 +55,7 @@ class ConnectionPool implements ConnectionPoolInterface
                 $this->connections->attach($this->makeNewConnection());
                 return $this->get();
             }
-            return $this->retryWithDelay();
+            return await($this->retryWithDelay());
         }
 
         return $connection;
@@ -76,7 +76,7 @@ class ConnectionPool implements ConnectionPoolInterface
         return ($this->connectionFactory)();
     }
 
-    protected function retryWithDelay(Deferred $deferred = null): ConnectionAdapterInterface
+    protected function retryWithDelay(Deferred $deferred = null): \React\Promise\Promise
     {
         if ($this->retryLimit !== null && $this->retryLimit < 1) {
             throw new ConnectionPoolException('No available connection to use');
@@ -106,6 +106,6 @@ class ConnectionPool implements ConnectionPoolInterface
             $this->retryWithDelay($deferred);
         });
 
-        return await($deferred->promise());
+        return $deferred->promise();
     }
 }
