@@ -1,10 +1,11 @@
-# szado/reactphp-connection-pool [UNSTABLE]
+# szado/reactphp-connection-pool
 
 Async and flexible pool for any type of connections built on top of [ReactPHP](https://reactphp.org/).
 
 Connection pooling allows you to easily manage range of connections with some remote service (e.g. a database server). You can define how many connections your app can estabilish or how to react when all connections are busy at the same time.
 
-- **Flexible** - manage any type of connections by implementing your own `ConnectionAdapter` and specify how connections are to be selected for use by passing proper `ConnectionSelector`.
+- **State monitoring** - each adapter maintains its connection state ("Ready", "Busy" or "Disconnected"). Based on this, the connection selector can determine if the specific connection is currently ready to use. This is especially useful when you use stateful operations (e.g. database transactions).
+- **Flexible** - manage any type of connections by implementing your own connection adapter and specify how connections are to be selected for use by passing proper connection selector.
 - **Lightweight and simple** - in assumptions it is a simple component that can be freely extended according to your preferences.
 
 ## Requirements
@@ -38,6 +39,7 @@ You can pass additional parameters to pool constructor:
 ## Todo
 - Built-in adapters (`clue/reactphp-redis`, `friends-of-reactphp/mysql`).
 - Connection selector based on Round Robin algorithm.
+- Reconnection.
 
 ## At the end...
 - Run tests: `./vendor/bin/phpunit`
