@@ -6,13 +6,15 @@ use React\EventLoop\Loop;
 use Szado\React\ConnectionPool\ConnectionPool;
 use PHPUnit\Framework\TestCase;
 use Szado\React\ConnectionPool\ConnectionPoolException;
+use function React\Async\await;
+use function React\Promise\resolve;
 
 class ConnectionPoolTest extends TestCase
 {
     private function getCorrectConstructorArgs(): array
     {
         return [
-            'connectionFactory' => fn () => new Adapter(),
+            'connectionFactory' => fn () => resolve(new Adapter()),
             'connectionSelectorClass' => Selector::class,
             'connectionsLimit' => null,
             'retryLimit' => null,
@@ -24,14 +26,14 @@ class ConnectionPoolTest extends TestCase
     public function testGet()
     {
         $cp = new ConnectionPool(...$this->getCorrectConstructorArgs());
-        $this->assertInstanceOf(Adapter::class, $cp->get());
+        $this->assertInstanceOf(Adapter::class, await($cp->get()));
 
         $cp = new ConnectionPool(...[
             ...$this->getCorrectConstructorArgs(),
             'connectionsLimit' => 1
         ]);
-        $a1 = $cp->get();
-        $a2 = $cp->get();
+        $a1 = await($cp->get());
+        $a2 = await($cp->get());
         $this->assertEquals($a1, $a2);
     }
 
@@ -44,7 +46,7 @@ class ConnectionPoolTest extends TestCase
             'retryLimit' => 1,
         ]);
         $this->expectException(ConnectionPoolException::class);
-        $cp->get();
+        await($cp->get());
     }
 
     public function testGetExceptionNoAvailable()
@@ -56,7 +58,7 @@ class ConnectionPoolTest extends TestCase
             'retryLimit' => 0,
         ]);
         $this->expectException(ConnectionPoolException::class);
-        $cp->get();
+        await($cp->get());
     }
 
     public function test_canMakeNewConnection()
