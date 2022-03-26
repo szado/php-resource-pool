@@ -12,8 +12,8 @@ use React\Promise\PromiseInterface;
 use Szado\React\ConnectionPool\ConnectionAdapters\ConnectionAdapterInterface;
 use Szado\React\ConnectionPool\ConnectionSelectors\ConnectionSelectorInterface;
 use Szado\React\ConnectionPool\ConnectionSelectors\UsageConnectionSelector;
-use function React\Async\await;
 use function React\Promise\reject;
+use function React\Promise\resolve;
 
 class ConnectionPool implements ConnectionPoolInterface
 {
@@ -22,7 +22,7 @@ class ConnectionPool implements ConnectionPoolInterface
     protected ConnectionSelectorInterface $selector;
 
     /**
-     * @param \Closure $connectionFactory Closure which creates connection adapter object with new connection.
+     * @param \Closure $connectionFactory A closure that returns a Promise and creates new connection adapter object.
      * @param class-string<ConnectionSelectorInterface> $connectionSelectorClass Connection selector to use on `getConnection()` call.
      * @param int|null $connectionsLimit Maximum number of connections that can be created (null for unlimited).
      * @param int|null $retryLimit How many times try to search for an active connection before rejecting (null for unlimited, 0 for immediately rejection if none at the moment).
@@ -44,24 +44,21 @@ class ConnectionPool implements ConnectionPoolInterface
         $this->loop ??= Loop::get();
     }
 
-    /**
-     * Get connection from pool.
-     * Throws error if no connection is available and cannot create the new one.
-     * @throws ConnectionPoolException
-     */
-    public function get(): ConnectionAdapterInterface
+    public function get(): PromiseInterface
     {
         $connection = $this->selectConnection();
 
-        if (!$connection) {
-            if ($this->canMakeNewConnection()) {
-                $this->connections->attach($this->makeNewConnection());
-                return $this->get();
-            }
-            return await($this->retryWithDelay());
+        if ($connection) {
+            return resolve($connection);
         }
 
-        return $connection;
+        if ($this->canMakeNewConnection()) {
+            return $this->makeNewConnection()
+                ->then(fn (ConnectionAdapterInterface $adapter) => $this->connections->attach($adapter))
+                ->then(fn () => $this->get());
+        }
+
+        return $this->retryWithDelay();
     }
 
     protected function selectConnection(): ?ConnectionAdapterInterface
@@ -74,9 +71,16 @@ class ConnectionPool implements ConnectionPoolInterface
         return $this->connectionsLimit === null || $this->connections->count() < $this->connectionsLimit;
     }
 
-    protected function makeNewConnection(): ConnectionAdapterInterface
+    protected function makeNewConnection(): PromiseInterface
     {
-        return ($this->connectionFactory)();
+        $promise = ($this->connectionFactory)();
+        if ($promise instanceof PromiseInterface) {
+            return $promise->then(
+                null,
+                fn (\Throwable $throwable) => throw new ConnectionPoolException("Error while creating new connection adapter: {$throwable->getMessage()}", previous: $throwable)
+            );
+        }
+        return reject(new ConnectionPoolException('Connection factory closure must return PromiseInterface<ConnectionAdapterInterface>'));
     }
 
     protected function retryWithDelay(): PromiseInterface
