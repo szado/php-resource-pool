@@ -22,7 +22,7 @@ class MyConnectionAdapter implements Szado\React\ConnectionPool\ConnectionAdapte
 
 $pool = new Szado\React\ConnectionPool\ConnectionPool(fn () => new MyConnectionAdapter());
 $adapter = React\Async\await($pool->get());
-$connection = $adapter->getConnection();
+$connection = React\Async\await($adapter->getConnection());
 // `$connection` is ready to use :)
 ```
 
