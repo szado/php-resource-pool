@@ -1,4 +1,4 @@
-# szado/reactphp-connection-pool
+# [unstable] szado/reactphp-connection-pool
 
 Async and flexible pool for any type of connections built on top of [ReactPHP](https://reactphp.org/).
 
@@ -22,7 +22,7 @@ class MyConnectionAdapter implements Szado\React\ConnectionPool\ConnectionAdapte
 
 $pool = new Szado\React\ConnectionPool\ConnectionPool(fn () => new MyConnectionAdapter());
 $adapter = React\Async\await($pool->get());
-$connection = $adapter->getConnection();
+$connection = React\Async\await($adapter->getConnection());
 // `$connection` is ready to use :)
 ```
 
