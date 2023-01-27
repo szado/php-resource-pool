@@ -4,7 +4,7 @@
     "type": "library",
     "require": {
         "react/promise": "^2.8",
-        "react/async": "4.x-dev",
+        "react/async": "^4",
         "react/event-loop": "^1.2"
     },
     "require-dev": {
