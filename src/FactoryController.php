@@ -6,10 +6,10 @@ namespace Shado\ResourcePool;
 
 use Closure;
 
-readonly class FactoryController
+class FactoryController
 {
     public function __construct(
-        private Closure $detach,
+        readonly private Closure $detach,
     ) {}
 
     /**
