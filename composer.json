@@ -1,6 +1,6 @@
 {
     "name": "shado/php-resource-pool",
-    "description": "A PHP library providing basic resource pooling support, most commonly used as a database connection pool.",
+    "description": "A PHP library providing resource pooling support, commonly used as a database connection pool.",
     "type": "library",
     "license": "MIT",
     "autoload": {
