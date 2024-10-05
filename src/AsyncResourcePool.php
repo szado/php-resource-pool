@@ -58,7 +58,7 @@ class AsyncResourcePool implements ResourcePoolInterface
             try {
                 $deferred->resolve($this->resourcePool->borrow());
                 return;
-            } catch (Exception) {
+            } catch (Exception $exception) {
 
             }
 
@@ -69,7 +69,10 @@ class AsyncResourcePool implements ResourcePoolInterface
                 return;
             }
 
-            $deferred->reject(new ResourceSelectingException("Cannot get free resource to borrow in given timeout"));
+            $deferred->reject(new ResourceSelectingException(
+                "Cannot get free resource to borrow in given timeout",
+                previous: $exception
+            ));
         };
 
         $makeTry();
