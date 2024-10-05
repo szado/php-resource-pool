@@ -1,6 +1,6 @@
 # shado/php-resource-pool
 
-A PHP library providing basic resource pooling support, commonly used as a database connection pool.
+A PHP library providing resource pooling support, commonly used as a database connection pool.
 
 Resource pooling allows you to easily manage a range of concurrently maintained resources. You can define how many of them can be created or which algorithm should be used for selecting the next resource from the pool.
 
@@ -21,7 +21,7 @@ The library includes two implementations of the pool:
 ```php
 $factory = function (\Shado\ResourcePool\FactoryController $controller) {
     $newConnection = new DbConnection();
-    $newConnection->onClose($controller->detach(...)); // When connection closes, detach it from pool
+    $newConnection->onClose($controller->detach(...)); // When connection closes, detach it from the pool
     return $newConnection;
 };
 
