@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace Shado\Tests\ResourcePool;
 
-use OutOfRangeException;
 use PHPUnit\Framework\TestCase;
+use Shado\ResourcePool\Exceptions\ResourceSelectingException;
 use Shado\ResourcePool\FactoryController;
 use Shado\ResourcePool\ResourcePool;
 use Shado\Tests\ResourcePool\Components\IdentifiableResource;
@@ -49,7 +49,7 @@ class ResourcePoolTest extends TestCase
 
         $pool->borrow();
 
-        $this->expectException(OutOfRangeException::class);
+        $this->expectException(ResourceSelectingException::class);
 
         $pool->borrow();
     }

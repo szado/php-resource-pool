@@ -5,12 +5,13 @@ declare(strict_types=1);
 namespace Shado\ResourcePool;
 
 use Closure;
-use OutOfRangeException;
+use Shado\ResourcePool\Exceptions\ResourceSelectingException;
 use Shado\ResourcePool\Selectors\LeastUsedResourceSelector;
 use Shado\ResourcePool\Selectors\ResourceSelectorInterface;
 use SplObjectStorage;
 
 /**
+ * Basic implementation of resource pool.
  * @template ResourceT of object
  */
 class ResourcePool implements ResourcePoolInterface
@@ -33,7 +34,9 @@ class ResourcePool implements ResourcePoolInterface
     }
 
     /**
-     * @inheritDoc
+     * Borrow a resource from the pool.
+     * @return ResourceT
+     * @throws ResourceSelectingException
      */
     public function borrow(): object
     {
@@ -44,11 +47,11 @@ class ResourcePool implements ResourcePoolInterface
         $resource = $this->selector->select($this->available);
 
         if (!$resource) {
-            throw new OutOfRangeException('No available resource to borrow');
+            throw new ResourceSelectingException('No available resource to borrow');
         }
 
         if (!$this->available->contains($resource)) {
-            throw new OutOfRangeException('Resource selected by selector is not available or unknown');
+            throw new ResourceSelectingException('Resource selected by selector is not available or unknown');
         }
 
         $this->available->detach($resource);
@@ -58,7 +61,8 @@ class ResourcePool implements ResourcePoolInterface
     }
 
     /**
-     * @inheritDoc
+     * Return the resource back to the pool.
+     * @param ResourceT $resource
      */
     public function return(object $resource): void
     {
