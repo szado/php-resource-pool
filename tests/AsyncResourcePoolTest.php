@@ -79,6 +79,32 @@ class AsyncResourcePoolTest extends TestCase
         Loop::run();
     }
 
+    public function borrowAsyncResourceWithUnlimitedRetrying(): void
+    {
+        $this->asyncResourcePool = new AsyncResourcePool($this->resourcePoolMock, 0.0);
+        $resource = new \stdClass();
+        $callCount = 0;
+
+        $this->resourcePoolMock
+            ->method('borrow')
+            ->willReturnCallback(function () use (&$callCount, $resource) {
+                if ($callCount++ < 2) {
+                    throw new Exception('Resource unavailable');
+                }
+                return $resource;
+            });
+
+        $promise = $this->asyncResourcePool->borrowAsync();
+
+        $this->assertInstanceOf(PromiseInterface::class, $promise);
+
+        $promise->then(function ($result) use ($resource) {
+            $this->assertSame($resource, $result);
+        });
+
+        Loop::run();
+    }
+
     public function testThrowsExceptionWhenResourceCannotBeBorrowedWithinTimeout(): void
     {
         $this->asyncResourcePool = new AsyncResourcePool($this->resourcePoolMock, 0.001);

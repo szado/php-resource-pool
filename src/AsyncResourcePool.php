@@ -63,8 +63,9 @@ class AsyncResourcePool implements ResourcePoolInterface
             }
 
             $timeout = $this->retryingTimeout;
+            $unlimitedTime = $timeout === 0.0;
 
-            if ($timeout === 0 || $timeout !== null && (microtime(true) - $startTime) < $timeout) {
+            if ($unlimitedTime || $timeout !== null && (microtime(true) - $startTime) < $timeout) {
                 Loop::futureTick($makeTry);
                 return;
             }
