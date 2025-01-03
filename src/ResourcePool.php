@@ -18,6 +18,7 @@ class ResourcePool implements ResourcePoolInterface
 {
     private SplObjectStorage $available;
     private SplObjectStorage $borrowed;
+    private int $pendingCount = 0;
 
     /**
      * @param Closure(FactoryController):ResourceT $factory Resource factory closure.
@@ -81,22 +82,25 @@ class ResourcePool implements ResourcePoolInterface
      * @return array{
      *     available_count: int,
      *     borrowed_count: int,
-     *     all_count: int,
+     *     pending_count: int,
+     *     total_count: int,
      * }
      */
     public function debug(): array
     {
-        $available = $this->available->count();
-        $borrowed = $this->borrowed->count();
-        return ['available_count' => $available, 'borrowed_count' => $borrowed, 'all_count' => $available + $borrowed];
+        return [
+            'available_count' => $this->available->count(),
+            'borrowed_count' => $this->borrowed->count(),
+            'pending_count' => $this->pendingCount,
+            'total_count' => $this->countTotal(),
+        ];
     }
 
     private function tryCreateResource(): void
     {
-        $allCount = $this->available->count() + $this->borrowed->count();
         $noLimit = $this->limit === 0;
 
-        if ($noLimit || $allCount < $this->limit) {
+        if ($noLimit || $this->countTotal() < $this->limit) {
             $resource = null;
             $controller = new FactoryController(function () use (&$resource) {
                 if ($resource) {
@@ -104,8 +108,20 @@ class ResourcePool implements ResourcePoolInterface
                     $this->available->detach($resource);
                 }
             });
-            $resource = ($this->factory)($controller);
+
+            try {
+                $this->pendingCount++;
+                $resource = ($this->factory)($controller);
+            } finally {
+                $this->pendingCount--;
+            }
+
             $this->available->attach($resource);
         }
+    }
+
+    private function countTotal(): int
+    {
+        return $this->available->count() + $this->borrowed->count() + $this->pendingCount;
     }
 }

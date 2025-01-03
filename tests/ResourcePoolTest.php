@@ -34,12 +34,12 @@ class ResourcePoolTest extends TestCase
         $r1 = $pool->borrow();
 
         $this->assertIsObject($r1);
-        $this->assertEquals(1, $pool->debug()['all_count']);
+        $this->assertEquals(1, $pool->debug()['total_count']);
         $this->assertEquals(1, $pool->debug()['borrowed_count']);
 
         $pool->return($r1);
 
-        $this->assertEquals(1, $pool->debug()['all_count']);
+        $this->assertEquals(1, $pool->debug()['total_count']);
         $this->assertEquals(1, $pool->debug()['available_count']);
     }
 
