@@ -21,10 +21,12 @@ class AsyncResourcePool implements ResourcePoolInterface
     /**
      * @param ResourcePoolInterface $resourcePool The resource pool instance to use under the hood.
      * @param ?float $retryingTimeout The timeout in seconds for retrying to obtain a free resource: set to 0 for unlimited time, or null to disable retrying.
+     * @param float $retryingDelay The delay in seconds between retrying attempts.
      */
     public function __construct(
         private readonly ResourcePoolInterface $resourcePool,
         private readonly ?float $retryingTimeout = 5,
+        private readonly float $retryingDelay = 0.01,
     ) {}
 
     /**
@@ -66,7 +68,7 @@ class AsyncResourcePool implements ResourcePoolInterface
             $unlimitedTime = $timeout === 0.0;
 
             if ($unlimitedTime || $timeout !== null && (microtime(true) - $startTime) < $timeout) {
-                Loop::futureTick($makeTry);
+                Loop::addTimer($this->retryingDelay, $makeTry);
                 return;
             }
 
