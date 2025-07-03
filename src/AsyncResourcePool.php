@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace Shado\ResourcePool;
 
-use Exception;
 use React\EventLoop\Loop;
 use React\Promise\Deferred;
 use React\Promise\PromiseInterface;
@@ -60,8 +59,11 @@ class AsyncResourcePool implements ResourcePoolInterface
             try {
                 $deferred->resolve($this->resourcePool->borrow());
                 return;
-            } catch (Exception $exception) {
-
+            } catch (ResourceSelectingException $throwable) {
+                // Retry only if the error is related to resource selection.
+            } catch (Throwable $throwable) {
+                $deferred->reject($throwable);
+                return;
             }
 
             $timeout = $this->retryingTimeout;
@@ -74,7 +76,7 @@ class AsyncResourcePool implements ResourcePoolInterface
 
             $deferred->reject(new ResourceSelectingException(
                 "Cannot get free resource to borrow in given timeout",
-                previous: $exception
+                previous: $throwable
             ));
         };
 
